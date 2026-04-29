@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserFromCookie } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
-export async function GET(req: NextRequest) {
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
   try {
-    const user = await getUserFromCookie()
+    const cookieStore = cookies()
+    const token = cookieStore.get('auth-token')?.value
 
-    if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    if (!token) {
+      return NextResponse.json({ error: 'No token' }, { status: 401 })
     }
 
-    return NextResponse.json(user)
+    const user = await prisma.user.findUnique({
+      where: { id: token }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } })
   } catch (error) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+

@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, verifyPassword } from '@/lib/auth'
-import { serialize } from 'cookie'
+import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
+export const dynamic = 'force-dynamic'
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await req.json()
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
-    }
-
+    const { email, password } = await request.json()
+    
     const user = await prisma.user.findUnique({
       where: { email }
     })
@@ -19,22 +16,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const isValid = await verifyPassword(password, user.hashedPassword)
-
+    const isValid = await bcrypt.compare(password, user.hashedPassword)
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const response = NextResponse.json({ message: 'Login successful' })
-    response.cookies.set('auth-token', user.id, {
+    const cookieStore = cookies()
+    cookieStore.set('auth-token', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      maxAge: 60 * 60 * 24 * 7 // 1 week
     })
 
-    return response
+    return NextResponse.json({ success: true, user: { id: user.id, email: user.email } })
   } catch (error) {
+    console.error(error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+
