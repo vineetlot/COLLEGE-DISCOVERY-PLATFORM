@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { User } from '@prisma/client'
 import { getUserFromCookie } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
