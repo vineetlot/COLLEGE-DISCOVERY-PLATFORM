@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { cookies } from 'next/headers'
+import { getUserFromCookie } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
